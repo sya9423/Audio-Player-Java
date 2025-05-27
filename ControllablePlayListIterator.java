@@ -11,7 +11,7 @@ public class ControllablePlayListIterator implements Iterator<AudioFile> {
     private int currentIndex;
 
     public ControllablePlayListIterator(List<AudioFile> audioFiles) {
-        this.audioFiles = new ArrayList<>(audioFiles); // Copy to avoid side effects
+        this.audioFiles = new ArrayList<>(audioFiles); // Defensive copy
         this.currentIndex = 0;
     }
 
@@ -24,7 +24,7 @@ public class ControllablePlayListIterator implements Iterator<AudioFile> {
                     || containsIgnoreCase(af.getTitle(), search)
                     || containsIgnoreCase(getAlbum(af), search)
                     || containsIgnoreCase(af.getFilename(), search)) {
-                this.audioFiles.add(af); // ✅ Correct list to add to
+                this.audioFiles.add(af);
             }
         }
 
@@ -33,7 +33,7 @@ public class ControllablePlayListIterator implements Iterator<AudioFile> {
             case TITLE -> this.audioFiles.sort(new TitleComparator());
             case ALBUM -> this.audioFiles.sort(new AlbumComparator());
             case DURATION -> this.audioFiles.sort(new DurationComparator());
-            default -> {} // DEFAULT means: keep original order
+            default -> {} // DEFAULT = keep original order
         }
 
         this.currentIndex = 0;
@@ -52,21 +52,31 @@ public class ControllablePlayListIterator implements Iterator<AudioFile> {
 
     @Override
     public boolean hasNext() {
-        return currentIndex < audioFiles.size();
+        return !audioFiles.isEmpty();
     }
 
     @Override
     public AudioFile next() {
-        if (!hasNext()) {
+        if (audioFiles.isEmpty()) {
             throw new NoSuchElementException("No more audio files.");
         }
-        return audioFiles.get(currentIndex++);
+        AudioFile result = audioFiles.get(currentIndex);
+        currentIndex = (currentIndex + 1) % audioFiles.size(); // Wrap around
+        return result;
+    }
+
+    // Peek current without advancing
+    public AudioFile current() {
+        if (audioFiles.isEmpty()) {
+            return null;
+        }
+        return audioFiles.get(currentIndex);
     }
 
     public AudioFile jumpToAudioFile(AudioFile file) {
         int pos = audioFiles.indexOf(file);
         if (pos >= 0) {
-            currentIndex = pos + 1;
+            currentIndex = (pos + 1) % audioFiles.size(); // Ensure .next() goes to next
             return file;
         } else {
             return null;

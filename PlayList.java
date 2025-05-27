@@ -10,18 +10,20 @@ import java.io.BufferedReader;
 
 public class PlayList implements Iterable<AudioFile> {
     private List<AudioFile> audioFiles;
-    private int current;
     private String search;
     private SortCriterion sortCriterion = SortCriterion.DEFAULT;
 
+    private ControllablePlayListIterator iterator;
+    private AudioFile currentFile;
+
     public PlayList() {
         audioFiles = new LinkedList<>();
-        current = 0;
+        resetIterator();
     }
 
     public PlayList(String m3uFilePath) {
-        this(); 
-        loadFromM3U(m3uFilePath);  
+        this();
+        loadFromM3U(m3uFilePath);
     }
 
     @Override
@@ -29,110 +31,73 @@ public class PlayList implements Iterable<AudioFile> {
         return new ControllablePlayListIterator(audioFiles, search, sortCriterion);
     }
 
-    
-
     public List<AudioFile> getList() {
         return audioFiles;
     }
 
     public void add(AudioFile file) {
         audioFiles.add(file);
+        resetIterator();
     }
 
     public void remove(AudioFile file) {
         audioFiles.remove(file);
-        if (current >= audioFiles.size()) {
-            current = -1;
-        }
+        resetIterator();
     }
 
     public int size() {
         return audioFiles.size();
     }
 
-    public int getCurrent() {
-        return current;
-    }
-
-    public void setCurrent(int current) {
-        this.current = current;
-    }
-
     public AudioFile currentAudioFile() {
-        if (current >= 0 && current < audioFiles.size()) {
-            return audioFiles.get(current);
-        } else {
-            return null;
-        }
+        return currentFile;
     }
 
     public void nextSong() {
-        if (audioFiles.isEmpty()) {
-            current = -1;
-            return;
-        }
-
-        if (current < 0 || current >= audioFiles.size() - 1) {
-            current = 0;
+        if (iterator != null && iterator.hasNext()) {
+            currentFile = iterator.next();
         } else {
-            current++;
+            resetIterator(); // Start from beginning if at the end
+        }
+    }
+
+    public void jumpToAudioFile(AudioFile file) {
+        AudioFile jumped = iterator.jumpToAudioFile(file);
+        if (jumped != null) {
+            currentFile = jumped;
         }
     }
 
     public void saveAsM3U(String pathname) {
-        FileWriter writer = null;
-        String sep = System.getProperty("line.separator");
-
-        try {
-            writer = new FileWriter(pathname);
-
+        try (FileWriter writer = new FileWriter(pathname)) {
+            String sep = System.getProperty("line.separator");
             for (AudioFile file : audioFiles) {
                 writer.write(file.getPathname() + sep);
             }
-
         } catch (IOException e) {
             throw new RuntimeException("Unable to write file: " + pathname, e);
-        } finally {
-            try {
-                if (writer != null) writer.close();
-            } catch (Exception e) {
-                // ignore
-            }
         }
     }
 
     public void loadFromM3U(String path) {
-        BufferedReader reader = null;
-        String line;
-
-        try {
-            reader = new BufferedReader(new FileReader(path));
+        try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
             audioFiles.clear();
-            current = 0;
-
+            String line;
             while ((line = reader.readLine()) != null) {
                 if (line.trim().isEmpty() || line.startsWith("#")) {
                     continue;
                 }
-
                 try {
                     AudioFile file = AudioFileFactory.createAudioFile(line.trim());
                     audioFiles.add(file);
                 } catch (NotPlayableException e) {
                     System.err.println("Error creating AudioFile for path: " + line.trim());
-                    e.printStackTrace();
                 }
             }
-
         } catch (IOException e) {
             throw new RuntimeException("Unable to read M3U file: " + path, e);
-        } finally {
-            try {
-                if (reader != null) reader.close();
-            } catch (IOException e) {
-                // ignore
-            }
         }
+        resetIterator();
     }
 
     public String getSearch() {
@@ -141,6 +106,7 @@ public class PlayList implements Iterable<AudioFile> {
 
     public void setSearch(String search) {
         this.search = search;
+        resetIterator();
     }
 
     public SortCriterion getSortCriterion() {
@@ -149,5 +115,15 @@ public class PlayList implements Iterable<AudioFile> {
 
     public void setSortCriterion(SortCriterion sortCriterion) {
         this.sortCriterion = sortCriterion;
+        resetIterator();
+    }
+
+    private void resetIterator() {
+        iterator = new ControllablePlayListIterator(audioFiles, search, sortCriterion);
+        if (iterator.hasNext()) {
+            currentFile = iterator.next();
+        } else {
+            currentFile = null;
+        }
     }
 }
