@@ -11,37 +11,38 @@ public class ControllablePlayListIterator implements Iterator<AudioFile> {
     private int currentIndex;
 
     public ControllablePlayListIterator(List<AudioFile> audioFiles) {
-        this.audioFiles = audioFiles;
+        this.audioFiles = new ArrayList<>(audioFiles); // Copy to avoid side effects
         this.currentIndex = 0;
     }
-    
-    public ControllablePlayListIterator(List<AudioFile> audioFiles, String search, SortCriterion sortCriterion) {
+
+    public ControllablePlayListIterator(List<AudioFile> inputFiles, String search, SortCriterion sortCriterion) {
         this.audioFiles = new ArrayList<>();
 
-        for (AudioFile af : audioFiles) {
-            if (search == null || search.isEmpty() ||
-                containsIgnoreCase(af.getAuthor(), search) ||
-                containsIgnoreCase(af.getTitle(), search) ||
-                containsIgnoreCase(getAlbum(af), search)) {
-            	audioFiles.add(af);
+        for (AudioFile af : inputFiles) {
+            if (search == null || search.isEmpty()
+                    || containsIgnoreCase(af.getAuthor(), search)
+                    || containsIgnoreCase(af.getTitle(), search)
+                    || containsIgnoreCase(getAlbum(af), search)
+                    || containsIgnoreCase(af.getFilename(), search)) {
+                this.audioFiles.add(af); // ✅ Correct list to add to
             }
         }
 
         switch (sortCriterion) {
-            case AUTHOR -> audioFiles.sort(new AuthorComparator());
-            case TITLE -> audioFiles.sort(new TitleComparator());
-            case ALBUM -> audioFiles.sort(new AlbumComparator());
-            case DURATION -> audioFiles.sort(new DurationComparator());
-            default -> {}
+            case AUTHOR -> this.audioFiles.sort(new AuthorComparator());
+            case TITLE -> this.audioFiles.sort(new TitleComparator());
+            case ALBUM -> this.audioFiles.sort(new AlbumComparator());
+            case DURATION -> this.audioFiles.sort(new DurationComparator());
+            default -> {} // DEFAULT means: keep original order
         }
 
         this.currentIndex = 0;
     }
-    
+
     private boolean containsIgnoreCase(String source, String target) {
         return source != null && source.toLowerCase().contains(target.toLowerCase());
     }
-    
+
     private String getAlbum(AudioFile af) {
         if (af instanceof TaggedFile tagged) {
             return tagged.getAlbum();
@@ -61,7 +62,6 @@ public class ControllablePlayListIterator implements Iterator<AudioFile> {
         }
         return audioFiles.get(currentIndex++);
     }
-
 
     public AudioFile jumpToAudioFile(AudioFile file) {
         int pos = audioFiles.indexOf(file);

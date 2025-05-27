@@ -1,4 +1,5 @@
 package studiplayer.audio;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -7,7 +8,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.BufferedReader;
 
-public class PlayList {
+public class PlayList implements Iterable<AudioFile> {
     private List<AudioFile> audioFiles;
     private int current;
     private String search;
@@ -17,14 +18,18 @@ public class PlayList {
         audioFiles = new LinkedList<>();
         current = 0;
     }
-    
+
     public PlayList(String m3uFilePath) {
         this(); 
         loadFromM3U(m3uFilePath);  
     }
+
+    @Override
     public Iterator<AudioFile> iterator() {
-        return new ControllablePlayListIterator(audioFiles);
+        return new ControllablePlayListIterator(audioFiles, search, sortCriterion);
     }
+
+    
 
     public List<AudioFile> getList() {
         return audioFiles;
@@ -52,7 +57,7 @@ public class PlayList {
     public void setCurrent(int current) {
         this.current = current;
     }
-    
+
     public AudioFile currentAudioFile() {
         if (current >= 0 && current < audioFiles.size()) {
             return audioFiles.get(current);
@@ -73,7 +78,7 @@ public class PlayList {
             current++;
         }
     }
-    
+
     public void saveAsM3U(String pathname) {
         FileWriter writer = null;
         String sep = System.getProperty("line.separator");
@@ -95,7 +100,7 @@ public class PlayList {
             }
         }
     }
-    
+
     public void loadFromM3U(String path) {
         BufferedReader reader = null;
         String line;
@@ -129,6 +134,7 @@ public class PlayList {
             }
         }
     }
+
     public String getSearch() {
         return search;
     }

@@ -15,7 +15,7 @@ public abstract class AudioFile {
         this.title = "";
     }
 
-    public AudioFile(String path){
+    public AudioFile(String path) {
         this();
         parsePathname(path);
 
@@ -109,8 +109,6 @@ public abstract class AudioFile {
     public void setTitle(String title) {
         this.title = title;
     }
-    
-
 
     public abstract void play();
 
@@ -121,4 +119,6 @@ public abstract class AudioFile {
     public abstract String formatDuration();
 
     public abstract String formatPosition();
+
+    public abstract long getDuration();
 }
